@@ -43,6 +43,7 @@ define('Cell', function() {
   'use strict';
 
   var SIZE = 5;
+  var COLOR = 'black';
 
   function CellException(message) {
     this.name = 'CellException';
@@ -54,11 +55,14 @@ define('Cell', function() {
       throw new CellException('Invalid arguments');
     }
 
+    var that = this;
     this.x = x;
     this.y = y;
+    this.color = COLOR;
 
     this.draw = function(context) {
-      context.fillRect(this.x * SIZE, this.y * SIZE, SIZE, SIZE);
+      context.fillStyle = that.color;
+      context.fillRect(that.x * SIZE, that.y * SIZE, SIZE, SIZE);
     };
 
     this.move = function(x, y) {
@@ -78,20 +82,31 @@ define('Cell', function() {
 define('GameBoard', ['underscore', 'HashMap', 'Cell'], function(_, HashMap, Cell) {
   'use strict';
 
+  function GameBoardException(message) {
+    this.name = 'GameBoardException';
+    this.message = message;
+  }
+
   return function GameBoard(seed) {
 
-    // var cells = (function(seed) {
+    if (!seed) {
+      throw new GameBoardException('Invalid arguments');
+    }
+
     var cells = [];
+
     _.each(seed, function(coords) {
       cells.push(new Cell(coords[0], coords[1]));
     });
-    //   return cells;
-    // }(seed));
 
     this.draw = function(context) {
       _.each(cells, function(cell) {
         cell.draw(context);
       });
+    };
+
+    this.tick = function(tick) {
+
     };
   };
 });
@@ -108,7 +123,48 @@ define('canvasContext', function() {
   return context;
 });
 
-require(['underscore', 'canvasContext', 'GameBoard'], function(_, context, GameBoard) {
+
+define('GameRuntime', ['canvasContext', 'GameBoard'], function(context, GameBoard) {
+  'use strict';
+
+  function GameRuntimeException(message) {
+    this.name = 'GameRuntimeException';
+    this.message = message;
+  }
+
+  return function GameRuntime() {
+    var that = this;
+
+    var gameLoop = function(tick) {
+      that.gameBoard.draw(context);
+      that.gameBoard.tick(tick);
+    };
+
+    this.setSeed = function(seed) {
+      that.seed = seed;
+      that.gameBoard = new GameBoard(seed);
+    };
+
+    this.start = function() {
+      if (!that.gameBoard) {
+        throw new GameRuntimeException('Runtime not initialized');
+      }
+
+      that.tick = 0;
+      that.intervalID = setInterval(function() {
+        gameLoop(that.tick);
+        that.tick += 1;
+      }, 200);
+    };
+
+    this.stop = function() {
+      clearInterval(that.intervalID);
+    };
+  };
+});
+
+
+require(['GameRuntime'], function(GameRuntime) {
   'use strict';
 
   var seed = [
@@ -117,6 +173,15 @@ require(['underscore', 'canvasContext', 'GameBoard'], function(_, context, GameB
     [2, 2]
   ];
 
-  var board = new GameBoard(seed);
-  board.draw(context);
+  var runtime = new GameRuntime();
+  runtime.setSeed(seed);
+
+  try {
+    runtime.start();
+  } catch (err) {
+    runtime.stop();
+    console.error(err.message);
+  }
+
+  setTimeout(runtime.stop, 5000);
 });
