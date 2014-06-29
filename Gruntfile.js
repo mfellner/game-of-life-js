@@ -11,7 +11,6 @@ module.exports = function(grunt) {
           out: 'dist/<%= pkg.name %>.min.js',
           useStrict: true,
           optimize: 'none',
-          // include: ['node_modules/underscore/underscore.js'],
         }
       },
     },
@@ -93,13 +92,6 @@ module.exports = function(grunt) {
         },
       },
     },
-    // qunit: {
-    //   files: ['test/**/*.html']
-    // },
-    // watch: {
-    //   files: ['<%= jshint.files %>'],
-    //   tasks: ['jshint', 'qunit']
-    // }
   });
 
   grunt.loadNpmTasks('grunt-contrib-copy');
@@ -110,8 +102,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-requirejs');
   // grunt.loadNpmTasks('grunt-contrib-qunit');
 
-  grunt.registerTask('default', ['jshint', 'requirejs', 'uglify', 'less',
-    'copy'
-  ]);
-  // grunt.registerTask('test', ['jshint', 'qunit']);
+  grunt.registerTask('default', ['jshint', 'requirejs', 'less', 'copy']);
+  grunt.registerTask('release', ['default', 'uglify']);
 };
