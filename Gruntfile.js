@@ -85,6 +85,13 @@ module.exports = function(grunt) {
           spawn: false,
         },
       },
+      html: {
+        files: ['html/**'],
+        tasks: ['copy'],
+        options: {
+          spawn: false,
+        },
+      },
     },
     // qunit: {
     //   files: ['test/**/*.html']

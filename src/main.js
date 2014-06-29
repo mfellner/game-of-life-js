@@ -27,13 +27,14 @@ define('HashMap', function() {
 
   return function HashMap() {
     var that = this;
+    this.values = {};
 
     this.put = function(key, val) {
-      that[hash(key)] = val;
+      that.values[hash(key)] = val;
     };
 
     this.get = function(key) {
-      return that[hash(key)];
+      return that.values[hash(key)];
     };
   };
 });
@@ -43,7 +44,7 @@ define('Cell', function() {
   'use strict';
 
   var SIZE = 5;
-  var COLOR = 'black';
+  var COLOR = 'rgba(0, 0, 0, 1)';
 
   function CellException(message) {
     this.name = 'CellException';
@@ -58,11 +59,23 @@ define('Cell', function() {
     var that = this;
     this.x = x;
     this.y = y;
+    this.age = 0;
+    this.alive = false;
     this.color = COLOR;
 
     this.draw = function(context) {
-      context.fillStyle = that.color;
-      context.fillRect(that.x * SIZE, that.y * SIZE, SIZE, SIZE);
+      if (that.alive) {
+        context.fillStyle = that.color;
+        context.fillRect(that.x * SIZE, that.y * SIZE, SIZE, SIZE);
+      }
+    };
+
+    this.kill = function() {
+      that.alive = false;
+    };
+
+    this.revive = function() {
+      that.alive = true;
     };
 
     this.move = function(x, y) {
@@ -82,31 +95,96 @@ define('Cell', function() {
 define('GameBoard', ['underscore', 'HashMap', 'Cell'], function(_, HashMap, Cell) {
   'use strict';
 
+  var COLOR = 'rgb(230, 230, 230)';
+
   function GameBoardException(message) {
     this.name = 'GameBoardException';
     this.message = message;
   }
 
-  return function GameBoard(seed) {
-
+  return function GameBoard(seed, size) {
     if (!seed) {
       throw new GameBoardException('Invalid arguments');
     }
 
-    var cells = [];
+    var that = this;
+    this.size = size;
+    this.color = COLOR;
+    this.cellMap = new HashMap();
 
+    // Initialize board with dead cells.
+    for (var i = 0; i < this.size[0]; i += 1) {
+      for (var k = 0; k < this.size[1]; k += 1) {
+        that.cellMap.put([i, k], new Cell(i, k));
+      }
+    }
+
+    // Revive seed cells.
     _.each(seed, function(coords) {
-      cells.push(new Cell(coords[0], coords[1]));
+      that.cellMap.get(coords).revive();
     });
 
-    this.draw = function(context) {
-      _.each(cells, function(cell) {
+    this.draw = function(context, tick) {
+      context.clearAll(that.color);
+
+      _.each(that.cellMap.values, function(cell) {
         cell.draw(context);
       });
-    };
 
-    this.tick = function(tick) {
+      var killList = [];
+      var reviveList = [];
 
+      _.each(that.cellMap.values, function(cell) {
+        var neighbourCount = 0;
+
+        _.each([
+          [-1, -1],
+          [-1, +0],
+          [-1, +1],
+          [+0, -1],
+          [+0, +1],
+          [+1, -1],
+          [+1, +0],
+          [+1, +1]
+        ], function(delta) {
+          var coords = [cell.x + delta[0], cell.y + delta[1]];
+          var neighbour = that.cellMap.get(coords);
+
+          if (neighbour && neighbour.alive) {
+            neighbourCount += 1;
+          }
+        });
+
+        // Any live cell with fewer than two live neighbours dies
+        if (cell.alive && neighbourCount < 2) {
+          // console.log('Any live cell with fewer than two live neighbours dies', cell);
+          killList.push(cell);
+        }
+        // Any live cell with more than three live neighbours dies
+        else if (cell.alive && neighbourCount > 3) {
+          // console.log('Any live cell with more than three live neighbours dies', cell);
+          killList.push(cell);
+        }
+        // Any live cell with two or three live neighbours lives on
+        else if (cell.alive && (neighbourCount === 2 || neighbourCount === 3)) {
+          // console.log('Any live cell with two or three live neighbours lives on', cell);
+          cell.age += 1;
+        }
+        // Any dead cell with exactly three live neighbours becomes a live cell
+        else if (!cell.alive && neighbourCount === 3) {
+          // console.log('Any dead cell with exactly three live neighbours becomes a live cell', cell);
+          reviveList.push(cell);
+        }
+      });
+
+      _.each(killList, function(cell) {
+        cell.kill();
+      });
+      _.each(reviveList, function(cell) {
+        cell.revive();
+      });
+
+      // console.log('---------TICK-----------------------------------');
     };
   };
 });
@@ -117,8 +195,15 @@ define('canvasContext', function() {
 
   var canvas = document.getElementById('game-board');
   var context = canvas.getContext('2d');
-  context.width = canvas.width;
-  context.height = canvas.height;
+
+  context.clearAll = function(color) {
+    context.fillStyle = color;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  };
+
+  context.getCanvasSize = function() {
+    return [canvas.width, canvas.height];
+  };
 
   return context;
 });
@@ -132,17 +217,16 @@ define('GameRuntime', ['canvasContext', 'GameBoard'], function(context, GameBoar
     this.message = message;
   }
 
-  return function GameRuntime() {
+  return function GameRuntime(interval) {
     var that = this;
 
     var gameLoop = function(tick) {
-      that.gameBoard.draw(context);
-      that.gameBoard.tick(tick);
+      that.gameBoard.draw(context, tick);
     };
 
     this.setSeed = function(seed) {
       that.seed = seed;
-      that.gameBoard = new GameBoard(seed);
+      that.gameBoard = new GameBoard(seed, context.getCanvasSize());
     };
 
     this.start = function() {
@@ -154,7 +238,7 @@ define('GameRuntime', ['canvasContext', 'GameBoard'], function(context, GameBoar
       that.intervalID = setInterval(function() {
         gameLoop(that.tick);
         that.tick += 1;
-      }, 200);
+      }, interval || 1);
     };
 
     this.stop = function() {
@@ -168,12 +252,12 @@ require(['GameRuntime'], function(GameRuntime) {
   'use strict';
 
   var seed = [
-    [0, 0],
     [1, 1],
-    [2, 2]
+    [1, 2],
+    [1, 3]
   ];
 
-  var runtime = new GameRuntime();
+  var runtime = new GameRuntime(200);
   runtime.setSeed(seed);
 
   try {
@@ -183,5 +267,5 @@ require(['GameRuntime'], function(GameRuntime) {
     console.error(err.message);
   }
 
-  setTimeout(runtime.stop, 5000);
+  setTimeout(runtime.stop, 4000);
 });
