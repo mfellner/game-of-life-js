@@ -79,5 +79,5 @@ require(['GameRuntime', 'CellSeed'], function(GameRuntime, CellSeed) {
     console.error(err.message);
   }
 
-  setTimeout(runtime.stop, 30000);
+  setTimeout(runtime.stop, 120000);
 });
