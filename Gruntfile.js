@@ -1,3 +1,7 @@
+/*
+ * Gruntfile Game of Life
+ */
+
 module.exports = function(grunt) {
 
   grunt.initConfig({
@@ -39,11 +43,8 @@ module.exports = function(grunt) {
     },
     less: {
       development: {
-        options: {
-          paths: ["bower_components/bootstrap/less"]
-        },
         files: {
-          "dist/main.css": "src/main.less"
+          'dist/main.css': 'html/main.less'
         }
       },
       production: {
@@ -51,7 +52,7 @@ module.exports = function(grunt) {
           cleancss: true
         },
         files: {
-          "dist/main.css": "dist/main.css"
+          'dist/main.css': 'dist/main.css'
         }
       }
     },
@@ -59,7 +60,7 @@ module.exports = function(grunt) {
       main: {
         files: [{
           cwd: 'html/',
-          src: '**',
+          src: '*.html',
           dest: 'dist/',
           expand: true,
           filter: 'isFile'
@@ -78,7 +79,7 @@ module.exports = function(grunt) {
         },
       },
       less: {
-        files: ['src/*.less'],
+        files: ['html/*.less'],
         tasks: ['less'],
         options: {
           spawn: false,
@@ -100,7 +101,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-requirejs');
-  // grunt.loadNpmTasks('grunt-contrib-qunit');
 
   grunt.registerTask('default', ['jshint', 'requirejs', 'less', 'copy']);
   grunt.registerTask('release', ['default', 'uglify']);
