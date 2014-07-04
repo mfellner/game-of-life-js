@@ -68,11 +68,11 @@ require(['GameRuntime', 'CellSeed'], function(GameRuntime, CellSeed) {
     beacon.seeds,
     gliderGun.seeds
   );
-  var runtime = new GameRuntime(50);
 
-  runtime.setSeed(seed);
+  var runtime = new GameRuntime();
 
   try {
+    runtime.setSeed(seed);
     runtime.start();
   } catch (err) {
     runtime.stop();
